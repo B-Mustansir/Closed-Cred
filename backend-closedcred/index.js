@@ -60,6 +60,80 @@ app.post('/createpublickey', async (req, res) => {
 
 })
 
+app.post('/validateCreds', async (req, res) => {
+    const accountAddress = req.body.address;
+    const requiredsUser = await user.findOne({ AccountID:accountAddress });
+    console.log(requiredsUser);
+    const AUTH_CHALLENGE = 'someRandomString';
+    console.log(requiredsUser.RawID)
+    const publicKey = {
+        // your domain
+        rp: {
+            name: 'closedcred',
+            id:'localhost'
+        },
+        
+        // random, cryptographically secure, at least 16 bytes
+        challenge: enc.encode(AUTH_CHALLENGE),
+        allowCredentials: [{
+            id: strToBin(requiredsUser.RawID),
+            type: 'public-key'
+        }],
+        authenticatorSelection: {
+            userVerification: "preferred"
+        },
+        pubKeyCredParams: [
+            {
+                type: "public-key", alg: -7 // "ES256" IANA COSE Algorithms registry
+            }
+        ]
+    };
+    res.send(publicKey);
+})
 
+app.post('/auth', async (req, res) => {
+    const AUTH_CHALLENGE = 'someRandomString';
+    const dataFromClient = JSON.parse(atob(req.body.clientDataJSON));
+    const retrievedChallenge = atob(dataFromClient.challenge);
+    const retrievedOrigin = dataFromClient.origin;
+    // At MINIMUM, your auth checksshould be:
+    // 1. Check that the retrieved challenge matches the auth challenge you sent to the client, as we do trivially below
+    // 2. Check that "retrievedOrigin" matches your domain - otherwise this might be a phish - not shown here
+    console.log(retrievedChallenge);
+    if (retrievedChallenge == AUTH_CHALLENGE) {
+        console.log("Authorized");
+        res.send({ Auth: 1 });
+    } else {
+        res.send({ Auth: 0 });
+    }
+})
+
+
+app.post('/getUpiId',async(req,res)=>{
+
+    let accountAddress=req.body.address;
+    let requireduser=user.findOne({UpiID:UpiID});
+    let respo=requireduser.AccountID
+
+})
+
+app.get('/getAddress/:upiID',async(req,res)=>{
+    const requser=await user.findOne({UpiID:req.params.upiID});
+    
+    const address=requser.AccountID;
+    console.log(requser);
+    console.log(address);
+    return res.send({address:address});
+})
+
+
+app.get('/getContractAdress/:PubKey',async(req,res)=>{
+
+    const requser=await user.findOne({AccountID:req.params.PubKey});
+    const address=requser.RoundUpContractAddress;
+    console.log(requser);
+    console.log(address);
+    return res.send({address:address});
+})
 
 app.listen(5000)
